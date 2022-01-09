@@ -2,27 +2,26 @@ package deepclone;
 
 import org.objenesis.ObjenesisStd;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Set;
 
 public class Cloner {
-    private static final Set<Class<?>> wrapperTypes = new HashSet<>();
+    private static final Set<Class<?>> knownImmutableTypes = Set.of(
+        Boolean.class,
+        Character.class,
+        Byte.class,
+        Short.class,
+        Integer.class,
+        Long.class,
+        Float.class,
+        Double.class,
+        Void.class,
+        String.class
+    );
 
-    static {
-        wrapperTypes.add(Boolean.class);
-        wrapperTypes.add(Character.class);
-        wrapperTypes.add(Byte.class);
-        wrapperTypes.add(Short.class);
-        wrapperTypes.add(Integer.class);
-        wrapperTypes.add(Long.class);
-        wrapperTypes.add(Float.class);
-        wrapperTypes.add(Double.class);
-        wrapperTypes.add(Void.class);
-    }
-
-    private final IdentityHashMap<Object, Object> originalToCloned =
+    private final IdentityHashMap<Object, Object> clonesMap =
         new IdentityHashMap<>();
 
     public <T> T deepClone(T original) throws IllegalAccessException {
@@ -36,10 +35,12 @@ public class Cloner {
             return original;
         }
 
-        Object clone = originalToCloned.get(original);
+        Object clone = clonesMap.get(original);
 
         if (clone == null) {
-            clone = deepCloneObject(original, c);
+            clone = (c.isArray())
+                ? deepCloneArray(original, c)
+                : deepCloneObject(original, c);
         }
 
         @SuppressWarnings("unchecked")
@@ -50,20 +51,33 @@ public class Cloner {
 
     private static boolean isImmutable(Class<?> c) {
         return c.isPrimitive() ||
-            wrapperTypes.contains(c) ||
-            c == String.class ||
+            knownImmutableTypes.contains(c) ||
             c.isRecord();
     }
 
-    private <T> T deepCloneObject(T original, Class<?> c)
+    private Object deepCloneArray(Object original, Class<?> c)
+            throws IllegalAccessException
+    {
+        int length = Array.getLength(original);
+        Object clone = Array.newInstance(c.componentType(), length);
+
+        clonesMap.put(original, clone);
+
+        for (int i = 0; i < length; ++i) {
+            Object value = Array.get(original, i);
+            Array.set(clone, i, deepClone(value));
+        }
+
+        return clone;
+    }
+
+    private Object deepCloneObject(Object original, Class<?> c)
             throws IllegalAccessException
     {
         ObjenesisStd objenesis = new ObjenesisStd();
+        Object clone = objenesis.newInstance(c);
 
-        @SuppressWarnings("unchecked")
-        T clone = (T)objenesis.newInstance(c);
-
-        originalToCloned.put(original, clone);
+        clonesMap.put(original, clone);
 
         while (c != null) {
             Field[] fields = c.getDeclaredFields();
@@ -71,10 +85,8 @@ public class Cloner {
             for (Field f : fields) {
                 f.setAccessible(true);
 
-                Object originalValue = f.get(original);
-                Object clonedValue = deepClone(originalValue);
-
-                f.set(clone, clonedValue);
+                Object value = f.get(original);
+                f.set(clone, deepClone(value));
             }
 
             c = c.getSuperclass();

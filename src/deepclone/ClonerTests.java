@@ -9,6 +9,8 @@ import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import static deepclone.Assertions.*;
+
 public class ClonerTests {
     private Cloner cloner;
     
@@ -25,10 +27,10 @@ public class ClonerTests {
             char u = 'u';
 
             int aClone = cloner.deepClone(a);
-            int uClone = cloner.deepClone(u);
+            char uClone = cloner.deepClone(u);
 
-            assertEquals(a, aClone);
-            assertEquals(u, uClone);
+            assertSame(a, aClone);
+            assertSame(u, uClone);
         }
 
         @Test
@@ -402,11 +404,116 @@ public class ClonerTests {
             LinkedList original = new LinkedList(1, 2, 3, 4, 5);
             LinkedList clone = cloner.deepClone(original);
 
-            assertEquals(original, clone);
-            assertNotSame(original, clone);
+            assertEqualButNotSame(original, clone);
 
             assertFalse(original.isBroken());
             assertFalse(clone.isBroken());
+        }
+    }
+
+    @Nested
+    class CloningArrays {
+        static class Element {
+            private double value;
+
+            public Element(double value) {
+                this.value = value;
+            }
+
+            @Override
+            public boolean equals(Object obj) {
+                if (obj instanceof Element e) {
+                    return value == e.value;
+                }
+
+                return false;
+            }
+        }
+
+        @Test
+        public void test_1dArray() throws IllegalAccessException {
+            Element[] array = { new Element(1), new Element(2), new Element(3) };
+            Element[] clone = cloner.deepClone(array);
+
+            assertArrayElementsEqualButNotSame(array, clone, 1);
+        }
+
+        @Test
+        public void test_2dArray() throws IllegalAccessException {
+            Element[][] array = {
+                { new Element(1), new Element(2), new Element(3) },
+                { new Element(4), new Element(5), new Element(6) },
+                { new Element(7), new Element(8), new Element(9) }
+            };
+
+            Element[][] clone = cloner.deepClone(array);
+
+            assertArrayElementsEqualButNotSame(array, clone, 2);
+        }
+
+        @Test
+        public void test_5dArray() throws IllegalAccessException {
+            var array = make5dArray();
+            var clone = cloner.deepClone(array);
+
+            assertArrayElementsEqualButNotSame(array, clone, 5);
+        }
+
+        private Element[][][][][] make5dArray() {
+            final int length = 5;
+
+            Element[][][][][] array = new Element[length][][][][];
+
+            int counter = 0;
+
+            for (int a = 0; a < length; ++a) {
+                array[a] = new Element[length][][][];
+
+                for (int b = 0; b < length; ++b) {
+                    array[a][b] = new Element[length][][];
+
+                    for (int c = 0; c < length; ++c) {
+                        array[a][b][c] = new Element[length][];
+
+                        for (int d = 0; d < length; ++d) {
+                            array[a][b][c][d] = new Element[length];
+
+                            for (int e = 0; e < length; ++e) {
+                                array[a][b][c][d][e] = new Element(counter);
+                                ++counter;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return array;
+        }
+
+        @Test
+        public void test_jaggedArray() throws IllegalAccessException {
+            Element[][] jagged = makeJaggedArray();
+            Element[][] clone = cloner.deepClone(jagged);
+
+            assertArrayElementsEqualButNotSame(jagged, clone, 2);
+        }
+
+        private Element[][] makeJaggedArray() {
+            int[] sizes = { 1, 2, 0, 5, 6, 10 };
+            Element[][] array = new Element[sizes.length][];
+
+            int counter = 0;
+
+            for (int i = 0; i < array.length; ++i) {
+                array[i] = new Element[sizes[i]];
+
+                for (int j = 0; j < array[i].length; ++j) {
+                    array[i][j] = new Element(counter);
+                    ++counter;
+                }
+            }
+
+            return array;
         }
     }
 }
