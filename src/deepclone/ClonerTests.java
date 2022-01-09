@@ -20,7 +20,7 @@ public class ClonerTests {
     }
     
     @Nested
-    class ImmutableTypes {
+    class ImmutableTypesAreNotCloned {
         @Test
         public void test_primitiveTypes() throws IllegalAccessException {
             int a = 42;
@@ -65,11 +65,34 @@ public class ClonerTests {
     }
 
     @Test
-    public void test_null() throws IllegalAccessException {
+    public void test_whenObjectIsNullReturnsNull() throws IllegalAccessException {
         Object original = null;
         Object clone = cloner.deepClone(original);
 
         assertSame(original, clone);
+    }
+
+    @Nested
+    class StaticFieldsAreIgnored {
+        static class Foo {
+            public static Bar bar = new Bar();
+        }
+
+        static class Bar { }
+
+        @Test
+        public void test() throws IllegalAccessException {
+            Foo original = new Foo();
+            Bar barBeforeCloning = Foo.bar;
+
+            cloner.deepClone(original);
+
+            //Если статические поля не игнорировались,
+            //то произошло глубокое копирование объекта по
+            //ссылке Foo.bar и после клонирование ссылка указывает
+            //на другой объект
+            assertSame(barBeforeCloning, Foo.bar);
+        }
     }
 
     @Nested

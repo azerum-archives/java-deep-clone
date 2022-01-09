@@ -4,6 +4,7 @@ import org.objenesis.ObjenesisStd;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.IdentityHashMap;
 import java.util.Set;
 
@@ -83,6 +84,10 @@ public class Cloner {
             Field[] fields = c.getDeclaredFields();
 
             for (Field f : fields) {
+                if (Modifier.isStatic(f.getModifiers())) {
+                    continue;
+                }
+
                 f.setAccessible(true);
 
                 Object value = f.get(original);
