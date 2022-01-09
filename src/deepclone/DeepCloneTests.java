@@ -3,13 +3,12 @@ package deepclone;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.util.LinkedList;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ClonerTests {
+public class DeepCloneTests {
     @Nested
     class ImmutableTypes {
         @Test
@@ -17,8 +16,8 @@ public class ClonerTests {
             int a = 42;
             char u = 'u';
 
-            int aClone = Cloner.deepClone(a);
-            int uClone = Cloner.deepClone(u);
+            int aClone = Objects.deepClone(a);
+            int uClone = Objects.deepClone(u);
 
             assertEquals(a, aClone);
             assertEquals(u, uClone);
@@ -29,8 +28,8 @@ public class ClonerTests {
             Integer a = 42;
             Character u = 'u';
 
-            Integer aClone = Cloner.deepClone(a);
-            Character uClone = Cloner.deepClone(u);
+            Integer aClone = Objects.deepClone(a);
+            Character uClone = Objects.deepClone(u);
 
             assertSame(a, aClone);
             assertSame(u, uClone);
@@ -39,7 +38,7 @@ public class ClonerTests {
         @Test
         public void test_string() throws IllegalAccessException {
             String s = "Hello, world";
-            String sClone = Cloner.deepClone(s);
+            String sClone = Objects.deepClone(s);
 
             assertSame(s, sClone);
         }
@@ -49,7 +48,7 @@ public class ClonerTests {
             record SomeRecord(int foo, String bar) {}
 
             SomeRecord r = new SomeRecord(42, "Lorem");
-            SomeRecord rClone = Cloner.deepClone(r);
+            SomeRecord rClone = Objects.deepClone(r);
 
             assertSame(r, rClone);
         }
@@ -58,7 +57,7 @@ public class ClonerTests {
     @Test
     public void test_null() throws IllegalAccessException {
         Object original = null;
-        Object clone = Cloner.deepClone(original);
+        Object clone = Objects.deepClone(original);
 
         assertSame(original, clone);
     }
@@ -212,7 +211,7 @@ public class ClonerTests {
             TField newValue
         ) throws IllegalAccessException {
             C original = new C();
-            C clone = Cloner.deepClone(original);
+            C clone = Objects.deepClone(original);
 
             assertEquals(getter.apply(original), getter.apply(clone));
 
@@ -280,7 +279,7 @@ public class ClonerTests {
             Address newYork = new Address("USA", "New York", "Main St.", 42);
             Person bob = new Person("Bob", newYork);
 
-            Person clone = Cloner.deepClone(bob);
+            Person clone = Objects.deepClone(bob);
 
             //Боб и его клон имеют полностью одинаковые свойства,
             //метод .equals() вернет true
@@ -295,59 +294,111 @@ public class ClonerTests {
     }
 
     @Nested
-    class NestedObjectWithTwoSameReferences {
-        static class Foo {
-            //По внутренеей логике класса Foo,
-            //bar1 и bar2 всегда должны ссылатся на один и тот же объект
-            private Bar bar1;
-            private Bar bar2;
+    class SelfReferencingObject {
+        static class Crazy {
+            public final Crazy self;
 
-            public Foo() {
-                bar1 = new Bar();
-                bar2 = bar1;
-            }
-
-            //Если bar1 != bar2, то логика объекта сломана
-            public boolean isBroken() {
-                return bar1 != bar2;
+            public Crazy() {
+                self = this;
             }
         }
-
-        static class Bar { }
 
         @Test
         public void test() throws IllegalAccessException {
-            Foo foo = new Foo();
-            Foo clone = Cloner.deepClone(foo);
+            Crazy original = new Crazy();
+            Crazy clone = Objects.deepClone(original);
 
-            assertFalse(foo.isBroken());
-            assertFalse(clone.isBroken());
+            assertNotSame(original, clone);
+            assertSame(clone, clone.self);
         }
     }
 
-    @Test
-    public void test_linkedList() throws IllegalAccessException {
-        LinkedList<Integer> numbers = new LinkedList<>();
+    @Nested
+    class LinkedListWithHeadAndTail {
+        static class LinkedList {
+            static class Node {
+                public int value;
+                public Node next;
 
-        for (int i = 0; i < 10; ++i) {
-            numbers.add(i);
+                public Node(int value, Node next) {
+                    this.value = value;
+                    this.next = next;
+                }
+            }
+
+            private Node head;
+            private Node tail;
+
+            public LinkedList(int ...values) {
+                head = tail = null;
+
+                for (int i : values) {
+                    if (head == null) {
+                        head = new Node(i, null);
+                        tail = head;
+                        continue;
+                    }
+
+                    tail.next = new Node(i, null);
+                    tail = tail.next;
+                }
+            }
+
+            public boolean isBroken() {
+                Node foundTail = getTail();
+                return foundTail != tail;
+            }
+
+            private Node getTail() {
+                if (head == null) {
+                    return null;
+                }
+
+                Node n = head;
+
+                while (n.next != null) {
+                    n = n.next;
+                }
+
+                return n;
+            }
+
+            @Override
+            public boolean equals(Object obj) {
+                if (obj instanceof LinkedList other) {
+                    return this.equals(other);
+                }
+
+                return false;
+            }
+
+            private boolean equals(LinkedList other) {
+                Node myCurrent = head;
+                Node otherCurrent = other.head;
+
+                while (myCurrent != null && otherCurrent != null) {
+                    if (myCurrent.value != otherCurrent.value) {
+                        return false;
+                    }
+
+                    myCurrent = myCurrent.next;
+                    otherCurrent = otherCurrent.next;
+                }
+
+                return myCurrent == null && otherCurrent == null;
+            }
         }
 
-        LinkedList<Integer> clone = Cloner.deepClone(numbers);
+        @Test
+        public void test() throws IllegalAccessException {
+            LinkedList original = new LinkedList(1, 2, 3, 4, 5);
+            LinkedList clone = Objects.deepClone(original);
 
-        assertEquals(numbers, clone);
-        assertNotSame(numbers, clone);
+            assertEquals(original, clone);
+            assertNotSame(original, clone);
 
-        clone.addLast(42);
-
-        int last = 0;
-
-        for (int i : clone) {
-            last = i;
+            assertFalse(original.isBroken());
+            assertFalse(clone.isBroken());
         }
-
-        assertEquals(last, 42);
-
-        assertNotEquals(numbers, clone);
     }
 }

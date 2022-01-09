@@ -22,7 +22,10 @@ public class Cloner {
         wrapperTypes.add(Void.class);
     }
 
-    public static <T> T deepClone(T original) throws IllegalAccessException {
+    private final IdentityHashMap<Object, Object> originalToCloned =
+        new IdentityHashMap<>();
+
+    public <T> T deepClone(T original) throws IllegalAccessException {
         if (original == null) {
             return null;
         }
@@ -43,7 +46,7 @@ public class Cloner {
             c.isRecord();
     }
 
-    private static <T> T deepCloneObject(T original, Class<?> c)
+    private <T> T deepCloneObject(T original, Class<?> c)
             throws IllegalAccessException
     {
         ObjenesisStd objenesis = new ObjenesisStd();
@@ -51,8 +54,7 @@ public class Cloner {
         @SuppressWarnings("unchecked")
         T clone = (T)objenesis.newInstance(c);
 
-        //@see ClonerTests.NestedObjectWithTwoSameReferences
-        IdentityHashMap<Object, Object> originalToCloned = new IdentityHashMap<>();
+        originalToCloned.put(original, clone);
 
         while (c != null) {
             Field[] fields = c.getDeclaredFields();
