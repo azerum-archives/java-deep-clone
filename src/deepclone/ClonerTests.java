@@ -1,5 +1,6 @@
 package deepclone;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -8,7 +9,14 @@ import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class DeepCloneTests {
+public class ClonerTests {
+    private Cloner cloner;
+    
+    @BeforeEach
+    public void createNewCloner() {
+        cloner = new Cloner();
+    }
+    
     @Nested
     class ImmutableTypes {
         @Test
@@ -16,8 +24,8 @@ public class DeepCloneTests {
             int a = 42;
             char u = 'u';
 
-            int aClone = Objects.deepClone(a);
-            int uClone = Objects.deepClone(u);
+            int aClone = cloner.deepClone(a);
+            int uClone = cloner.deepClone(u);
 
             assertEquals(a, aClone);
             assertEquals(u, uClone);
@@ -28,8 +36,8 @@ public class DeepCloneTests {
             Integer a = 42;
             Character u = 'u';
 
-            Integer aClone = Objects.deepClone(a);
-            Character uClone = Objects.deepClone(u);
+            Integer aClone = cloner.deepClone(a);
+            Character uClone = cloner.deepClone(u);
 
             assertSame(a, aClone);
             assertSame(u, uClone);
@@ -38,7 +46,7 @@ public class DeepCloneTests {
         @Test
         public void test_string() throws IllegalAccessException {
             String s = "Hello, world";
-            String sClone = Objects.deepClone(s);
+            String sClone = cloner.deepClone(s);
 
             assertSame(s, sClone);
         }
@@ -48,7 +56,7 @@ public class DeepCloneTests {
             record SomeRecord(int foo, String bar) {}
 
             SomeRecord r = new SomeRecord(42, "Lorem");
-            SomeRecord rClone = Objects.deepClone(r);
+            SomeRecord rClone = cloner.deepClone(r);
 
             assertSame(r, rClone);
         }
@@ -57,7 +65,7 @@ public class DeepCloneTests {
     @Test
     public void test_null() throws IllegalAccessException {
         Object original = null;
-        Object clone = Objects.deepClone(original);
+        Object clone = cloner.deepClone(original);
 
         assertSame(original, clone);
     }
@@ -211,7 +219,7 @@ public class DeepCloneTests {
             TField newValue
         ) throws IllegalAccessException {
             C original = new C();
-            C clone = Objects.deepClone(original);
+            C clone = cloner.deepClone(original);
 
             assertEquals(getter.apply(original), getter.apply(clone));
 
@@ -279,7 +287,7 @@ public class DeepCloneTests {
             Address newYork = new Address("USA", "New York", "Main St.", 42);
             Person bob = new Person("Bob", newYork);
 
-            Person clone = Objects.deepClone(bob);
+            Person clone = cloner.deepClone(bob);
 
             //Боб и его клон имеют полностью одинаковые свойства,
             //метод .equals() вернет true
@@ -306,7 +314,7 @@ public class DeepCloneTests {
         @Test
         public void test() throws IllegalAccessException {
             Crazy original = new Crazy();
-            Crazy clone = Objects.deepClone(original);
+            Crazy clone = cloner.deepClone(original);
 
             assertNotSame(original, clone);
             assertSame(clone, clone.self);
@@ -392,7 +400,7 @@ public class DeepCloneTests {
         @Test
         public void test() throws IllegalAccessException {
             LinkedList original = new LinkedList(1, 2, 3, 4, 5);
-            LinkedList clone = Objects.deepClone(original);
+            LinkedList clone = cloner.deepClone(original);
 
             assertEquals(original, clone);
             assertNotSame(original, clone);

@@ -36,7 +36,16 @@ public class Cloner {
             return original;
         }
 
-        return deepCloneObject(original, c);
+        Object clone = originalToCloned.get(original);
+
+        if (clone == null) {
+            clone = deepCloneObject(original, c);
+        }
+
+        @SuppressWarnings("unchecked")
+        T tClone = (T)clone;
+
+        return tClone;
     }
 
     private static boolean isImmutable(Class<?> c) {
@@ -63,12 +72,7 @@ public class Cloner {
                 f.setAccessible(true);
 
                 Object originalValue = f.get(original);
-                Object clonedValue = originalToCloned.get(originalValue);
-
-                if (clonedValue == null) {
-                    clonedValue = deepClone(originalValue);
-                    originalToCloned.put(originalValue, clonedValue);
-                }
+                Object clonedValue = deepClone(originalValue);
 
                 f.set(clone, clonedValue);
             }
