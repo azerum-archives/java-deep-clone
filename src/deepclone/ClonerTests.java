@@ -73,29 +73,6 @@ public class ClonerTests {
     }
 
     @Nested
-    class StaticFieldsAreIgnored {
-        static class Foo {
-            public static Bar bar = new Bar();
-        }
-
-        static class Bar { }
-
-        @Test
-        public void test() throws IllegalAccessException {
-            Foo original = new Foo();
-            Bar barBeforeCloning = Foo.bar;
-
-            cloner.deepClone(original);
-
-            //Если статические поля не игнорировались,
-            //то произошло глубокое копирование объекта по
-            //ссылке Foo.bar и после клонирование ссылка указывает
-            //на другой объект
-            assertSame(barBeforeCloning, Foo.bar);
-        }
-    }
-
-    @Nested
     class AccessModifiersAndInheritance {
         static class A {
             private int aPrivate = 10;
@@ -251,6 +228,88 @@ public class ClonerTests {
             setter.accept(clone, newValue);
 
             assertNotEquals(getter.apply(original), getter.apply(clone));
+        }
+    }
+
+    @Nested
+    class StaticFieldsAreIgnored {
+        static class Foo {
+            public static Bar bar = new Bar();
+        }
+
+        static class Bar { }
+
+        @Test
+        public void test() throws IllegalAccessException {
+            Foo original = new Foo();
+            Bar barBeforeCloning = Foo.bar;
+
+            cloner.deepClone(original);
+
+            //Если статические поля не игнорировались,
+            //то произошло глубокое копирование объекта по
+            //ссылке Foo.bar и после клонирование ссылка указывает
+            //на другой объект
+            assertSame(barBeforeCloning, Foo.bar);
+        }
+    }
+
+    @Nested
+    class FinalFieldsAreCloned {
+        static class Foo {
+            public final int variable;
+            public final int hardcoded = 42;
+
+            public Foo(int variable) {
+                this.variable = variable;
+            }
+        }
+
+        private Foo original;
+        private Foo clone;
+
+        @BeforeEach
+        public void makeObjects() throws IllegalAccessException {
+            original = new Foo(10);
+            clone = cloner.deepClone(original);
+        }
+
+        @Test
+        public void test_variableFields() {
+            assertEquals(original.variable, clone.variable);
+        }
+
+        @Test
+        public void test_hardcodedFields() {
+            assertEquals(original.hardcoded, clone.hardcoded);
+        }
+    }
+
+    @Nested
+    class LocalClasses {
+        @Test
+        public void test() throws IllegalAccessException {
+            class Local {
+                public int value;
+
+                public Local(int value) {
+                    this.value = value;
+                }
+
+                @Override
+                public boolean equals(Object obj) {
+                    if (obj instanceof Local l) {
+                        return value == l.value;
+                    }
+
+                    return false;
+                }
+            }
+
+            Local original = new Local(42);
+            Local clone = cloner.deepClone(original);
+
+            assertEqualButNotSame(original, clone);
         }
     }
 
