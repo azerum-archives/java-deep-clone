@@ -6,6 +6,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Set;
 
 public class Cloner {
@@ -39,9 +40,15 @@ public class Cloner {
         Object clone = clonesMap.get(original);
 
         if (clone == null) {
-            clone = (c.isArray())
-                ? deepCloneArray(original, c)
-                : deepCloneObject(original, c);
+            if (c.isArray()) {
+                clone = deepCloneArray(original, c);
+            }
+            else if (original instanceof List list) {
+                clone = deepCloneList(list, c);
+            }
+            else {
+                clone = deepCloneObject(original, c);
+            }
         }
 
         @SuppressWarnings("unchecked")
@@ -70,6 +77,32 @@ public class Cloner {
         }
 
         return clone;
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private List deepCloneList(List original, Class<?> c)
+        throws IllegalAccessException
+    {
+        List clone = createListOfClass(c);
+
+        for (Object o : original) {
+            clone.add( deepClone(o) );
+        }
+
+        return clone;
+    }
+
+    @SuppressWarnings("rawtypes")
+    private List createListOfClass(Class<?> c) {
+        try {
+            return (List)c.getDeclaredConstructor().newInstance();
+        }
+        catch (Exception e) {
+            throw new AssertionError(
+                "Этого никогда не должно было произойти. Время отладки!",
+                e
+            );
+        }
     }
 
     private Object deepCloneObject(Object original, Class<?> c)

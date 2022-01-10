@@ -4,6 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -286,34 +289,6 @@ public class ClonerTests {
     }
 
     @Nested
-    class LocalClasses {
-        @Test
-        public void test() throws IllegalAccessException {
-            class Local {
-                public int value;
-
-                public Local(int value) {
-                    this.value = value;
-                }
-
-                @Override
-                public boolean equals(Object obj) {
-                    if (obj instanceof Local l) {
-                        return value == l.value;
-                    }
-
-                    return false;
-                }
-            }
-
-            Local original = new Local(42);
-            Local clone = cloner.deepClone(original);
-
-            assertEqualButNotSame(original, clone);
-        }
-    }
-
-    @Nested
     class SimpleNestedObject {
         static class Person {
             public String fullName;
@@ -493,25 +468,25 @@ public class ClonerTests {
         }
     }
 
-    @Nested
-    class CloningArrays {
-        static class Element {
-            private double value;
+    static class Element {
+        private double value;
 
-            public Element(double value) {
-                this.value = value;
-            }
-
-            @Override
-            public boolean equals(Object obj) {
-                if (obj instanceof Element e) {
-                    return value == e.value;
-                }
-
-                return false;
-            }
+        public Element(double value) {
+            this.value = value;
         }
 
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof Element e) {
+                return value == e.value;
+            }
+
+            return false;
+        }
+    }
+
+    @Nested
+    class ClonesArrayElements {
         @Test
         public void test_1dArray() throws IllegalAccessException {
             Element[] array = { new Element(1), new Element(2), new Element(3) };
@@ -596,6 +571,32 @@ public class ClonerTests {
             }
 
             return array;
+        }
+    }
+
+    @Nested
+    class ClonesListElements {
+        @Test
+        public void test_ArrayList() throws IllegalAccessException {
+            testList(new ArrayList<>());
+        }
+
+        @Test
+        public void test_LinkedList() throws IllegalAccessException {
+            testList(new LinkedList<>());
+        }
+
+        private void testList(List<Element> list)
+            throws IllegalAccessException
+        {
+            for (int i = 0; i < 10; ++i) {
+                list.add(new Element(i));
+            }
+
+            List<Element> clone = cloner.deepClone(list);
+
+            assertInstanceOf(list.getClass(), clone);
+            assertIterableElementsEqualButNotSame(list, clone);
         }
     }
 }

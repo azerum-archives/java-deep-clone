@@ -2,8 +2,7 @@ package deepclone;
 
 import java.lang.reflect.Array;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class Assertions {
     public static void assertEqualButNotSame(Object a, Object b) {
@@ -32,6 +31,24 @@ public class Assertions {
                 Array.get(b, i),
                 dimensions - 1
             );
+        }
+    }
+
+    public static <T> void assertIterableElementsEqualButNotSame(
+        Iterable<T> a,
+        Iterable<T> b
+    ) {
+        var aIt = a.iterator();
+        var bIt = b.iterator();
+
+        while (aIt.hasNext() && bIt.hasNext()) {
+            if (!aIt.next().equals(bIt.next())) {
+                fail();
+            }
+        }
+
+        if (aIt.hasNext() || bIt.hasNext()) {
+            fail();
         }
     }
 }
